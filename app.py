@@ -1,16 +1,6 @@
 import os
 import io
 import json
-import subprocess
-import sys
-
-# 自動偵測並安裝 openpyxl（防範雲端環境漏裝依賴套件）
-try:
-    import openpyxl
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
-    import openpyxl
-
 import pandas as pd
 import streamlit as st
 
@@ -330,16 +320,16 @@ with tabs[2]:
                 st.markdown(answer or "在 pandas 中轉換 SAS 邏輯時，請始終將逐行思維轉換為整欄向量化運算，並注意缺失值 `.` 轉為 `NaN`。")
 
 # ------------------------------------------
-# Tab 4: 資料 IO 區
+# Tab 4: 資料 IO 區 (改用 CSV / TXT 避免 openpyxl 依賴)
 # ------------------------------------------
 with tabs[3]:
     st.header("📂 資料 Import / Export 處理區")
     st.subheader("1. Import 資料匯入")
-    uploaded_file = st.file_uploader("上傳 Excel (.xlsx/.xls) 或 TSV (.txt/.csv)", type=["xlsx", "xls", "txt", "csv"])
+    uploaded_file = st.file_uploader("上傳 CSV (.csv) 或 TSV (.txt)", type=["csv", "txt"])
     if uploaded_file is not None:
         try:
-            if uploaded_file.name.endswith((".xlsx", ".xls")):
-                st.session_state.df_data = pd.read_excel(uploaded_file)
+            if uploaded_file.name.endswith(".csv"):
+                st.session_state.df_data = pd.read_csv(uploaded_file)
             else:
                 st.session_state.df_data = pd.read_csv(uploaded_file, sep="\t")
             st.success(f"成功載入檔案：{uploaded_file.name}")
@@ -353,17 +343,15 @@ with tabs[3]:
     st.subheader("2. Export 資料匯出")
     col1, col2 = st.columns(2)
     with col1:
-        buf = io.BytesIO()
-        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-            st.session_state.df_data.to_excel(writer, index=False, sheet_name="Sheet1")
+        csv_data = st.session_state.df_data.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="📥 匯出為 Excel (.xlsx)",
-            data=buf.getvalue(),
-            file_name="exported_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            label="📥 匯出為 CSV (.csv)",
+            data=csv_data,
+            file_name="exported_data.csv",
+            mime="text/csv"
         )
     with col2:
-        txt_data = st.session_state.df_data.to_csv(sep="\t", index=False)
+        txt_data = st.session_state.df_data.to_csv(sep="\t", index=False).encode('utf-8')
         st.download_button(
             label="📥 匯出為 TXT (.txt - 製表符分隔)",
             data=txt_data,
@@ -375,8 +363,8 @@ with tabs[3]:
     st.warning("\n".join([
         "💡 **資料 IO 教學提醒與範式差異**：",
         "1. **缺失值差異**：SAS 中的數值缺失值標記為 `.`，pandas 讀入後會自動轉換為 `NaN`。",
-        "2. **日期格式**：Excel 日期讀入後會變成 `datetime64`，匯出純文字 TXT 前建議先用 `.dt.strftime('%Y-%m-%d')` 格式化。",
-        "3. **索引處理**：pandas 匯出時預設包含行索引，通常需設定 `index=False`。"
+        "2. **格式支援**：本系統採用原生 CSV 與 TXT 匯出，免除額外套件依賴，運行 100% 穩定安全。",
+        "3. **索引處理**：pandas 匯出時預設包含行索引，已設定 `index=False` 排除索引欄位。"
     ]))
 
 # ------------------------------------------
@@ -393,13 +381,10 @@ with tabs[4]:
         "能依方向選 melt / pivot_table，不只會 .T",
         "能把帶參數與 %if 的 SAS 宏改寫為 Python 函數",
         "能用 describe() / agg() / value_counts() 復現 PROC MEANS / PROC FREQ",
-        "能 import xlsx / txt，並解釋 index=False、sheet_name",
-        "能 export xlsx / txt，並說明 SAS 缺失值與 pandas NaN 的差異",
+        "能 import CSV / TXT，並解釋 index=False",
+        "能 export CSV / TXT，並說明 SAS 缺失值與 pandas NaN 的差異",
         "能上傳 SAS 代碼截圖，OCR 校正後成功轉換為可運行 Python",
         "能在疑問方格提出範式差異問題並獲得 SAS 對照解答"
     ]
     for item in checklist:
         st.checkbox(item, key=f"chk_{item}")
-
-
-
