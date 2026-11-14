@@ -15,21 +15,20 @@ layout="wide"
 
 # 初始化 Session State
 if "df_data" not in st.session_state:
-# 建立預設全域示例資料
-st.session_state.df_data = pd.DataFrame({
-"EmpID": [101, 102, 103, 104, 105],
-"Dept": ["HR", "IT", "IT", "HR", "FIN"],
-"Salary": [50000, 75000, 82000, 52000, 90000],
-"Bonus": [5000, None, 8000, None, 10000],
-"HireDate": pd.to_datetime(["2020-01-15", "2019-03-20", "2021-06-01", "2018-11-10", "2017-05-04"]),
-"Name": ["Alice", "Bob", "Charlie", "David", "Eva"]
-})
+    st.session_state.df_data = pd.DataFrame({
+        "EmpID": [101, 102, 103, 104, 105],
+        "Dept": ["HR", "IT", "IT", "HR", "FIN"],
+        "Salary": [50000, 75000, 82000, 52000, 90000],
+        "Bonus": [5000, None, 8000, None, 10000],
+        "HireDate": pd.to_datetime(["2020-01-15", "2019-03-20", "2021-06-01", "2018-11-10", "2017-05-04"]),
+        "Name": ["Alice", "Bob", "Charlie", "David", "Eva"]
+    })
 
 if "ocr_text" not in st.session_state:
-st.session_state.ocr_text = ""
+    st.session_state.ocr_text = ""
 if "conversion_result" not in st.session_state:
-st.session_state.conversion_result = None
-
+    st.session_state.conversion_result = None
+  
 # API Key 環境變數檢查
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
