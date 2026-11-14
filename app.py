@@ -28,7 +28,7 @@ if "ocr_text" not in st.session_state:
     st.session_state.ocr_text = ""
 if "conversion_result" not in st.session_state:
     st.session_state.conversion_result = None
-  
+ 
 # API Key 環境變數檢查
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -67,18 +67,25 @@ return response.choices[0].message.content
 except Exception as e:
 return f"LLM API 呼叫失敗：{str(e)}"
 
-# Mock / Engine OCR 處理
-def process_ocr(image_file, engine="OCY"):
-# 模擬 OCR 識別結果
-mock_text = """DATA work.output;
-SET work.sample_data;
-IF Salary > 60000 THEN Salary_Class = 'High';
-ELSE Salary_Class = 'Low';
-Sub_Name = SUBSTR(Name, 1, 3);
-RUN;"""
-confidence = 0.96 if engine == "OCY" else (0.91 if engine == "Xberg" else 0.85)
-return mock_text, confidence
-
+# Mock LLM API 呼叫 (若未配置真實 API 密鑰時的回退安全機制)
+def call_llm_api(prompt, system_instruction=""):
+    if not OPENAI_API_KEY:
+        # 當沒有配置 OpenAI 密鑰時提供結構化模擬回應
+        return None
+    try:
+        import openai
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"LLM API 呼叫失敗：{str(e)}"
 
 # ==========================================
 # UI 介面設計：標題與頁籤
