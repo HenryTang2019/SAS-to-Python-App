@@ -1,6 +1,16 @@
 import os
 import io
 import json
+import subprocess
+import sys
+
+# 自動偵測並安裝 openpyxl（防範雲端環境漏裝依賴套件）
+try:
+    import openpyxl
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
+    import openpyxl
+
 import pandas as pd
 import streamlit as st
 
