@@ -8,12 +8,11 @@ import streamlit as st
 # 0. 頁面初始化與基本設定
 # ==========================================
 st.set_page_config(
-    page_title="SAS → Python 學習與轉換助手",
+    page_title="SAS to Python Learning & Conversion Assistant",
     page_icon="🔄",
     layout="wide"
 )
 
-# 初始化 Session State
 if "df_data" not in st.session_state:
     st.session_state.df_data = pd.DataFrame({
         "EmpID": [101, 102, 103, 104, 105],
@@ -29,10 +28,8 @@ if "ocr_text" not in st.session_state:
 if "conversion_result" not in st.session_state:
     st.session_state.conversion_result = None
 
-# API Key 環境變數檢查
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# 內置知識庫
 KNOWLEDGE_BASE = {
     "data step": "SAS DATA Step 是隱含的逐行迴圈 (Implicit Loop)；pandas 則是向量化運算 (Vectorized Operations)，應儘量避免在 DataFrame 上使用 for 迴圈。",
     "first.": "SAS 中的 FIRST.var 需要先 SORT，再用 DATA Step 判斷。pandas 替代方案為 `df.groupby('var').first()` 或 `df.groupby('var').head(1)` 或 `df.groupby('var')['target'].transform('first')`。",
@@ -66,20 +63,17 @@ def call_llm_api(prompt, system_instruction=""):
         return f"LLM API 呼叫失敗：{str(e)}"
 
 def process_ocr(image_file, engine="OCY"):
-    mock_text = (
-        "DATA work.output;\n"
-        "    SET work.sample_data;\n"
-        "    IF Salary > 60000 THEN Salary_Class = 'High';\n"
-        "    ELSE Salary_Class = 'Low';\n"
-        "    Sub_Name = SUBSTR(Name, 1, 3);\n"
+    mock_text = "\n".join([
+        "DATA work.output;",
+        "    SET work.sample_data;",
+        "    IF Salary > 60000 THEN Salary_Class = 'High';",
+        "    ELSE Salary_Class = 'Low';",
+        "    Sub_Name = SUBSTR(Name, 1, 3);",
         "RUN;"
-    )
+    ])
     confidence = 0.96 if engine == "OCY" else (0.91 if engine == "Xberg" else 0.85)
     return mock_text, confidence
 
-# ==========================================
-# UI 介面設計：標題與頁籤
-# ==========================================
 st.title("🔄 SAS → Python (pandas) 學習與代碼轉換助手")
 st.markdown("專為 SAS 背景資料分析師打造的範式轉換與自動化翻譯工具")
 
@@ -104,21 +98,19 @@ with tabs[0]:
         st.markdown("### 1.1 DataFrame vs DATA Step 隱含迴圈")
         col1, col2 = st.columns(2)
         with col1:
-            st.code(
-                "/* SAS: 逐行隱含迴圈 */\n"
-                "DATA work.emp_bonus;\n"
-                "    SET work.sample_data;\n"
-                "    IF Bonus IS MISSING THEN Total = Salary;\n"
-                "    ELSE Total = Salary + Bonus;\n"
-                "RUN;",
-                language="sas"
-            )
+            st.code("\n".join([
+                "/* SAS: 逐行隱含迴圈 */",
+                "DATA work.emp_bonus;",
+                "    SET work.sample_data;",
+                "    IF Bonus IS MISSING THEN Total = Salary;",
+                "    ELSE Total = Salary + Bonus;",
+                "RUN;"
+            ]), language="sas")
         with col2:
-            st.code(
-                "# Python: 向量化直接計算 (非 for 迴圈)\n"
-                "df['Total'] = df['Salary'] + df['Bonus'].fillna(0)",
-                language="python"
-            )
+            st.code("\n".join([
+                "# Python: 向量化直接計算 (非 for 迴圈)",
+                "df['Total'] = df['Salary'] + df['Bonus'].fillna(0)"
+            ]), language="python")
         st.info("💡 **轉換要點**：SAS DATA Step 底層是 implicit loop；pandas 優先採用向量化運算，速度遠快於原生 for 迴圈。")
         with st.expander("✏️ 小練習 1.1"):
             st.markdown("**題目**：寫出將 `Salary` 加薪 10% 產生新欄位 `New_Salary` 的 pandas 程式碼。")
@@ -128,20 +120,18 @@ with tabs[0]:
         st.markdown("### 1.2 索引與字串切片差異")
         col1, col2 = st.columns(2)
         with col1:
-            st.code(
-                "/* SAS: 位置從 1 開始，substr(s, start, length) */\n"
-                "DATA work.emp_sub;\n"
-                "    SET work.sample_data;\n"
-                "    Short_Name = SUBSTR(Name, 1, 2);\n"
-                "RUN;",
-                language="sas"
-            )
+            st.code("\n".join([
+                "/* SAS: 位置從 1 開始，substr(s, start, length) */",
+                "DATA work.emp_sub;",
+                "    SET work.sample_data;",
+                "    Short_Name = SUBSTR(Name, 1, 2);",
+                "RUN;"
+            ]), language="sas")
         with col2:
-            st.code(
-                "# Python: 索引從 0 開始，左閉右開 [start:stop]\n"
-                "df['Short_Name'] = df['Name'].str[0:2]",
-                language="python"
-            )
+            st.code("\n".join([
+                "# Python: 索引從 0 開始，左閉右開 [start:stop]",
+                "df['Short_Name'] = df['Name'].str[0:2]"
+            ]), language="python")
         st.info("💡 **轉換要點**：SAS 從 1 開始並指定長度；Python 從 0 開始且左閉右開，DataFrame 列上需加 `.str`。")
 
     elif "階段 2" in stage:
@@ -149,25 +139,23 @@ with tabs[0]:
         st.markdown("### 2.1 FIRST. / LAST. 的復現")
         col1, col2 = st.columns(2)
         with col1:
-            st.code(
-                "/* SAS: FIRST. / LAST. */\n"
-                "PROC SORT DATA=work.sample_data OUT=sorted_emp;\n"
-                "    BY Dept Salary;\n"
-                "RUN;\n"
-                "DATA work.highest_paid;\n"
-                "    SET sorted_emp;\n"
-                "    BY Dept;\n"
-                "    IF LAST.Dept;\n"
+            st.code("\n".join([
+                "/* SAS: FIRST. / LAST. */",
+                "PROC SORT DATA=work.sample_data OUT=sorted_emp;",
+                "    BY Dept Salary;",
                 "RUN;",
-                language="sas"
-            )
+                "DATA work.highest_paid;",
+                "    SET sorted_emp;",
+                "    BY Dept;",
+                "    IF LAST.Dept;",
+                "RUN;"
+            ]), language="sas")
         with col2:
-            st.code(
-                "# Python: groupby + tail / last\n"
-                "df_sorted = df.sort_values(by=['Dept', 'Salary'])\n"
-                "highest_paid = df_sorted.groupby('Dept').tail(1)",
-                language="python"
-            )
+            st.code("\n".join([
+                "# Python: groupby + tail / last",
+                "df_sorted = df.sort_values(by=['Dept', 'Salary'])",
+                "highest_paid = df_sorted.groupby('Dept').tail(1)"
+            ]), language="python")
         st.info("💡 **轉換要點**：pandas 使用 `groupby()` 搭配 `head(1)` / `tail(1)` 或 `last()` 復現 `FIRST./LAST.`。")
         with st.expander("✏️ 小練習 2.1"):
             st.markdown("**題目**：如何取得每個部門 (Dept) 入職時間最早 (HireDate) 的員工？")
@@ -178,14 +166,13 @@ with tabs[0]:
         st.markdown("### 3.1 PROC SQL JOIN & COALESCE")
         col1, col2 = st.columns(2)
         with col1:
-            st.code(
-                "PROC SQL;\n"
-                "    CREATE TABLE work.merged AS\n"
-                "    SELECT a.*, COALESCE(a.Bonus, 0) AS Fixed_Bonus\n"
-                "    FROM work.sample_data AS a;\n"
-                "QUIT;",
-                language="sas"
-            )
+            st.code("\n".join([
+                "PROC SQL;",
+                "    CREATE TABLE work.merged AS",
+                "    SELECT a.*, COALESCE(a.Bonus, 0) AS Fixed_Bonus",
+                "    FROM work.sample_data AS a;",
+                "QUIT;"
+            ]), language="sas")
         with col2:
             st.code("df['Fixed_Bonus'] = df['Bonus'].fillna(0)", language="python")
         st.info("💡 **轉換要點**：COALESCE 可用 `.fillna()` 或 `.combine_first()` 替代；多表 JOIN 用 `pd.merge()`。")
@@ -194,22 +181,20 @@ with tabs[0]:
         st.markdown("### 3.2 PROC FREQ 與 PROC MEANS")
         col1, col2 = st.columns(2)
         with col1:
-            st.code(
-                "PROC FREQ DATA=work.sample_data;\n"
-                "    TABLES Dept / MISSING;\n"
-                "RUN;\n"
-                "PROC MEANS DATA=work.sample_data MEAN STD;\n"
-                "    VAR Salary;\n"
-                "    CLASS Dept;\n"
+            st.code("\n".join([
+                "PROC FREQ DATA=work.sample_data;",
+                "    TABLES Dept / MISSING;",
                 "RUN;",
-                language="sas"
-            )
+                "PROC MEANS DATA=work.sample_data MEAN STD;",
+                "    VAR Salary;",
+                "    CLASS Dept;",
+                "RUN;"
+            ]), language="sas")
         with col2:
-            st.code(
-                "freq = df['Dept'].value_counts(dropna=False)\n"
-                "means = df.groupby('Dept')['Salary'].agg(['mean', 'std'])",
-                language="python"
-            )
+            st.code("\n".join([
+                "freq = df['Dept'].value_counts(dropna=False)",
+                "means = df.groupby('Dept')['Salary'].agg(['mean', 'std'])"
+            ]), language="python")
         st.info("💡 **轉換要點**：`value_counts(dropna=False)` 保留缺失值統計；`PROC MEANS` 可用 `describe()` 或 `groupby().agg()`。")
 
     elif "階段 4" in stage:
@@ -217,21 +202,19 @@ with tabs[0]:
         st.markdown("### 4.1 SAS Macro (%IF/%DO) → Python Function")
         col1, col2 = st.columns(2)
         with col1:
-            st.code(
-                '%MACRO filter_dept(data_in=, dept_name=, min_sal=0);\n'
-                '    DATA work.filtered_out;\n'
-                '        SET &data_in;\n'
-                '        WHERE Dept = "&dept_name" AND Salary >= &min_sal;\n'
-                '    RUN;\n'
-                '%MEND filter_dept;',
-                language="sas"
-            )
+            st.code("\n".join([
+                "%MACRO filter_dept(data_in=, dept_name=, min_sal=0);",
+                "    DATA work.filtered_out;",
+                "        SET &data_in;",
+                "        WHERE Dept = \"&dept_name\" AND Salary >= &min_sal;",
+                "    RUN;",
+                "%MEND filter_dept;"
+            ]), language="sas")
         with col2:
-            st.code(
-                "def filter_dept(data: pd.DataFrame, dept_name: str, min_sal: float = 0) -> pd.DataFrame:\n"
-                "    return data[(data['Dept'] == dept_name) & (data['Salary'] >= min_sal)].copy()",
-                language="python"
-            )
+            st.code("\n".join([
+                "def filter_dept(data: pd.DataFrame, dept_name: str, min_sal: float = 0) -> pd.DataFrame:",
+                "    return data[(data['Dept'] == dept_name) & (data['Salary'] >= min_sal)].copy()"
+            ]), language="python")
         st.info("💡 **轉換要點**：Python 無需 Macro 預處理器，直接使用標準 `def` 函數與明確參數傳遞即可。")
 
 # ------------------------------------------
@@ -243,15 +226,15 @@ with tabs[1]:
     input_sas_code = ""
 
     if convert_mode == "手動輸入 SAS 代碼":
-        default_sas = (
-            "DATA work.target_emp;\n"
-            "    SET work.sample_data;\n"
-            "    IF Dept = 'IT' THEN Bonus_Rate = 0.15;\n"
-            "    ELSE Bonus_Rate = 0.05;\n"
-            "    Total_Comp = Salary * (1 + Bonus_Rate);\n"
-            "    Sub_Name = SUBSTR(Name, 1, 3);\n"
+        default_sas = "\n".join([
+            "DATA work.target_emp;",
+            "    SET work.sample_data;",
+            "    IF Dept = 'IT' THEN Bonus_Rate = 0.15;",
+            "    ELSE Bonus_Rate = 0.05;",
+            "    Total_Comp = Salary * (1 + Bonus_Rate);",
+            "    Sub_Name = SUBSTR(Name, 1, 3);",
             "RUN;"
-        )
+        ])
         input_sas_code = st.text_area("請輸入 SAS 代碼", value=default_sas, height=180)
     else:
         st.subheader("圖片上傳與 OCR 識別")
@@ -270,14 +253,14 @@ with tabs[1]:
             system_prompt = "你是一位精通 SAS 與 Python pandas 的資料工程大師。請將 SAS 代碼轉換為 Python 代碼，並輸出 JSON 格式。"
             user_prompt = (
                 "請將以下 SAS 代碼轉換為 Python (pandas) 代碼：\n\n"
-                "```sas\n" + input_sas_code + "\n```\n\n"
-                "請嚴格輸出以下 JSON 格式：\n"
-                "{\n"
-                '  "python_code": "完整 Python 程式碼",\n'
-                '  "line_by_line": [{"sas": "SAS片段", "python": "Python對應", "score": 2, "note": "說明"}],\n'
-                '  "total_score": 3,\n'
-                '  "penalty_reason": "扣分原因說明"\n'
-                "}"
+                + "```sas\n" + input_sas_code + "\n```\n\n"
+                + "請嚴格輸出以下 JSON 格式：\n"
+                + "{\n"
+                + '  "python_code": "完整 Python 程式碼",\n'
+                + '  "line_by_line": [{"sas": "SAS片段", "python": "Python對應", "score": 2, "note": "說明"}],\n'
+                + '  "total_score": 3,\n'
+                + '  "penalty_reason": "扣分原因說明"\n'
+                + "}"
             )
             llm_response = call_llm_api(user_prompt, system_prompt)
             if llm_response and llm_response.strip().startswith("{"):
@@ -287,17 +270,126 @@ with tabs[1]:
                     st.session_state.conversion_result = None
 
             if not st.session_state.conversion_result:
-                fallback_py = (
-                    "df_target = df.copy()\n"
-                    "df_target['Bonus_Rate'] = df_target['Dept'].apply(lambda x: 0.15 if x == 'IT' else 0.05)\n"
-                    "df_target['Total_Comp'] = df_target['Salary'] * (1 + df_target['Bonus_Rate'])\n"
+                fallback_py = "\n".join([
+                    "df_target = df.copy()",
+                    "df_target['Bonus_Rate'] = df_target['Dept'].apply(lambda x: 0.15 if x == 'IT' else 0.05)",
+                    "df_target['Total_Comp'] = df_target['Salary'] * (1 + df_target['Bonus_Rate'])",
                     "df_target['Sub_Name'] = df_target['Name'].str[0:3]"
-                )
+                ])
+                l2l_list = [
+                    {"sas": "DATA work.target_emp;", "python": "df_target = df.copy()", "score": 1, "note": "資料集複製"},
+                    {"sas": "IF Dept = IT THEN ...", "python": "df_target['Bonus_Rate'] = ...", "score": 3, "note": "條件分支"},
+                    {"sas": "Total_Comp = Salary * ...", "python": "df_target['Total_Comp'] = ...", "score": 1, "note": "向量化運算"},
+                    {"sas": "SUBSTR(Name, 1, 3)", "python": "df_target['Name'].str[0:3]", "score": 4, "note": "字串切片偏移"}
+                ]
                 st.session_state.conversion_result = {
                     "python_code": fallback_py,
-                    "line_by_line": [
-                        {"sas": "DATA work.target_emp;", "python": "df_target = df.copy()", "score": 1, "note": "資料集複製與映射"},
-                        {"sas": "IF Dept = IT THEN ...", "python": "df_target['Bonus_Rate'] = ...", "score": 3, "note": "條件分支處理"},
-                        {"sas": "Total_Comp = Salary * ...", "python": "df_target['Total_Comp'] = ...", "score": 1, "note": "向量化運算"},
-                        {"sas": "SUBSTR(Name, 1, 3)", "python": "df_target['Name'].str[0:3]",
+                    "line_by_line": l2l_list,
+                    "total_score": 4,
+                    "penalty_reason": "本段代碼涉及邏輯條件分支與字串切片索引偏移調整，故評分為 4/10。"
+                }
+
+    if st.session_state.conversion_result:
+        res = st.session_state.conversion_result
+        st.markdown("### 1. 轉換後的 Python 代碼")
+        st.code(res["python_code"], language="python")
+        st.markdown("### 2. 逐行對照與難度評分 (1–10)")
+        df_l2l = pd.DataFrame(res["line_by_line"])
+        df_l2l.columns = ["SAS 代碼", "Python 等價", "難度分", "轉換要點"]
+        st.dataframe(df_l2l, use_container_width=True)
+        st.markdown(f"**綜合轉換難度評分**：`{res['total_score']}/10`")
+        st.warning(f"💡 **扣分與難度解釋**：{res['penalty_reason']}")
+
+# ------------------------------------------
+# Tab 3: 疑問與解答區
+# ------------------------------------------
+with tabs[2]:
+    st.header("❓ SAS 轉 Python 疑問方格 + 💡 解答方格")
+    user_query = st.text_input("請輸入你在 SAS 轉 Python 時遇到的範式或語法疑問：", "")
+    if st.button("搜尋 / 解答"):
+        if user_query.strip():
+            matched_key = next((k for k in KNOWLEDGE_BASE if k in user_query.lower()), None)
+            st.markdown("### 💡 解答方格")
+            if matched_key:
+                st.success(f"【內置知識庫匹配：{matched_key}】")
+                st.markdown(KNOWLEDGE_BASE[matched_key])
+            else:
+                st.info("【內置知識庫未直接匹配，啟動 LLM 知識庫擴展檢索】")
+                sys_inst = "你是一位精通 SAS 與 Python pandas 範式差異的資深專家。請回答使用者關於 SAS 轉換為 Python 的問題，強調範式差異與轉換要點。"
+                answer = call_llm_api(user_query, sys_inst)
+                st.markdown(answer or "在 pandas 中轉換 SAS 邏輯時，請始終將逐行思維轉換為整欄向量化運算，並注意缺失值 `.` 轉為 `NaN`。")
+
+# ------------------------------------------
+# Tab 4: 資料 IO 區
+# ------------------------------------------
+with tabs[3]:
+    st.header("📂 資料 Import / Export 處理區")
+    st.subheader("1. Import 資料匯入")
+    uploaded_file = st.file_uploader("上傳 Excel (.xlsx/.xls) 或 TSV (.txt/.csv)", type=["xlsx", "xls", "txt", "csv"])
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith((".xlsx", ".xls")):
+                st.session_state.df_data = pd.read_excel(uploaded_file)
+            else:
+                st.session_state.df_data = pd.read_csv(uploaded_file, sep="\t")
+            st.success(f"成功載入檔案：{uploaded_file.name}")
+        except Exception as e:
+            st.error(f"檔案讀取失敗：{e}")
+
+    st.markdown("**當前記憶體中的 DataFrame 預覽 (前 5 行)：**")
+    st.dataframe(st.session_state.df_data.head())
+
+    st.markdown("---")
+    st.subheader("2. Export 資料匯出")
+    col1, col2 = st.columns(2)
+    with col1:
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+            st.session_state.df_data.to_excel(writer, index=False, sheet_name="Sheet1")
+        st.download_button(
+            label="📥 匯出為 Excel (.xlsx)",
+            data=buf.getvalue(),
+            file_name="exported_data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    with col2:
+        txt_data = st.session_state.df_data.to_csv(sep="\t", index=False)
+        st.download_button(
+            label="📥 匯出為 TXT (.txt - 製表符分隔)",
+            data=txt_data,
+            file_name="exported_data.txt",
+            mime="text/plain"
+        )
+
+    st.markdown("---")
+    st.warning("\n".join([
+        "💡 **資料 IO 教學提醒與範式差異**：",
+        "1. **缺失值差異**：SAS 中的數值缺失值標記為 `.`，pandas 讀入後會自動轉換為 `NaN`。",
+        "2. **日期格式**：Excel 日期讀入後會變成 `datetime64`，匯出純文字 TXT 前建議先用 `.dt.strftime('%Y-%m-%d')` 格式化。",
+        "3. **索引處理**：pandas 匯出時預設包含行索引，通常需設定 `index=False`。"
+    ]))
+
+# ------------------------------------------
+# Tab 5: 目標完成清單
+# ------------------------------------------
+with tabs[4]:
+    st.header("🎯 學習通關與能力驗收清單")
+    st.markdown("請根據您的學習狀況進行勾選自我檢測：")
+    checklist = [
+        "能用 pandas 重寫不含宏的 DATA Step，並解釋為何不需要顯式迴圈",
+        "能用 groupby + transform / nth 復現 FIRST./LAST.",
+        "能區分 substr(s,1,2) 與 s[0:2]，並在 DataFrame 列上用 .str",
+        "能把 LEFT JOIN / INNER JOIN / COALESCE 翻譯為 pd.merge + fillna / combine_first",
+        "能依方向選 melt / pivot_table，不只會 .T",
+        "能把帶參數與 %if 的 SAS 宏改寫為 Python 函數",
+        "能用 describe() / agg() / value_counts() 復現 PROC MEANS / PROC FREQ",
+        "能 import xlsx / txt，並解釋 index=False、sheet_name",
+        "能 export xlsx / txt，並說明 SAS 缺失值與 pandas NaN 的差異",
+        "能上傳 SAS 代碼截圖，OCR 校正後成功轉換為可運行 Python",
+        "能在疑問方格提出範式差異問題並獲得 SAS 對照解答"
+    ]
+    for item in checklist:
+        st.checkbox(item, key=f"chk_{item}")
+
+
 
